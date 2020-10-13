@@ -52,7 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TownyUniverse {
     private static TownyUniverse instance;
     private final Towny towny;
-    
+
     private final Map<String, Resident> residents = new ConcurrentHashMap<>();
     private final Trie residentsTrie = new Trie();
     private final Map<String, Town> towns = new ConcurrentHashMap<>();
@@ -63,7 +63,7 @@ public class TownyUniverse {
     private final Map<String, CustomDataField> registeredMetadata = new HashMap<>();
 	private final Map<WorldCoord, TownBlock> townBlocks = new ConcurrentHashMap<>();
 	private CompletableFuture<Void> backupFuture;
-    
+
     private final List<Resident> jailedResidents = new ArrayList<>();
     private final String rootFolder;
     private TownyDataSource dataSource;
@@ -71,20 +71,20 @@ public class TownyUniverse {
     private War warEvent;
     private String saveDbType;
     private String loadDbType;
-    
+
     private TownyUniverse() {
         towny = Towny.getPlugin();
         rootFolder = towny.getDataFolder().getPath();
     }
-    
+
     // TODO: Put loadSettings into the constructor, since it is 1-time-run code.
     boolean loadSettings() {
-        
+
         try {
             TownySettings.loadConfig(rootFolder + File.separator + "settings" + File.separator + "config.yml", towny.getVersion());
             Translation.loadLanguage(rootFolder + File.separator + "settings", "english.yml");
             TownyPerms.loadPerms(rootFolder + File.separator + "settings", "townyperms.yml");
-            
+
         } catch (IOException | TownyException e) {
             e.printStackTrace();
             return false;
@@ -94,17 +94,17 @@ public class TownyUniverse {
 
         saveDbType = TownySettings.getSaveDatabase();
         loadDbType = TownySettings.getLoadDatabase();
-        
+
         System.out.println("[Towny] Database: [Load] " + loadDbType + " [Save] " + saveDbType);
-        
-        clearAll();
-                
+
+        //clearAll();
+
         long startTime = System.currentTimeMillis();
         if (!loadDatabase(loadDbType)) {
             System.out.println("[Towny] Error: Failed to load!");
             return false;
         }
-        
+
         long time = System.currentTimeMillis() - startTime;
         System.out.println("[Towny] Database: Loaded in " + time + "ms.");
         System.out.println("[Towny] Database: " + TownySettings.getUUIDPercent() + " of residents have stored UUIDs.");
@@ -124,11 +124,11 @@ public class TownyUniverse {
                     break;
                 }
                 default: {
-                
+
                 }
             }
             FileMgmt.checkOrCreateFolder(rootFolder + File.separator + "logs"); // Setup the logs folder here as the logger will not yet be enabled.
-           
+
             if (loadDbType.equalsIgnoreCase(saveDbType)) {
                 // Update all Worlds data files
                 dataSource.saveAllWorlds();
@@ -136,20 +136,20 @@ public class TownyUniverse {
                 //Formats are different so save ALL data.
                 dataSource.saveAll();
             }
-            
+
         } catch (UnsupportedOperationException e) {
             System.out.println("[Towny] Error: Unsupported save format!");
             return false;
         }
-        
+
         Version lastRunVersion = Version.fromString(TownySettings.getLastRunVersion());
-        
+
         // Only migrate if the user just updated.
         if (!lastRunVersion.equals(towny.getVersion())) {
 			ConfigMigrator migrator = new ConfigMigrator(TownySettings.getConfig(), "config-migration.json");
 			migrator.migrate();
 		}
-        
+
         File f = new File(rootFolder, "outpostschecked.txt");
         if (!(f.exists())) {
             for (Town town : dataSource.getTowns()) {
@@ -160,18 +160,18 @@ public class TownyUniverse {
 
 		// Run both the backup cleanup and backup async.
 		performBackup();
-        
+
         return true;
     }
-    
+
     public void performBackup() {
 		backupFuture = CompletableFuture
 			.runAsync(new CleanupBackupTask())
 			.thenRunAsync(new BackupTask());
 	}
-    
+
     private boolean loadDatabase(String loadDbType) {
-        
+
         switch (loadDbType.toLowerCase()) {
             case "ff":
             case "flatfile": {
@@ -188,14 +188,14 @@ public class TownyUniverse {
                 return false;
             }
         }
-        
+
         return dataSource.loadAll();
     }
-    
+
     public void startWarEvent() {
         warEvent = new War(towny, TownySettings.getWarTimeWarningDelay());
     }
-    
+
     //TODO: This actually breaks the design pattern, so I might just redo warEvent to never be null.
     //TODO for: Articdive
     public void endWarEvent() {
@@ -203,14 +203,14 @@ public class TownyUniverse {
             warEvent.toggleEnd();
         }
     }
-    
+
     public void finishTasks() {
     	if (backupFuture != null) {
 			// Join into main thread for proper termination.
 			backupFuture.join();
 		}
 	}
-    
+
     public void addWarZone(WorldCoord worldCoord) {
         try {
         	if (worldCoord.getTownyWorld().isWarAllowed())
@@ -220,7 +220,7 @@ public class TownyUniverse {
         }
         towny.updateCache(worldCoord);
     }
-    
+
     public void removeWarZone(WorldCoord worldCoord) {
         try {
             worldCoord.getTownyWorld().removeWarZone(worldCoord);
@@ -229,35 +229,35 @@ public class TownyUniverse {
         }
         towny.updateCache(worldCoord);
     }
-    
+
     public TownyPermissionSource getPermissionSource() {
         return permissionSource;
     }
-    
+
     public void setPermissionSource(TownyPermissionSource permissionSource) {
         this.permissionSource = permissionSource;
     }
-    
+
     public War getWarEvent() {
         return warEvent;
     }
-    
+
     public void setWarEvent(War warEvent) {
         this.warEvent = warEvent;
     }
-    
+
     public String getRootFolder() {
         return rootFolder;
     }
-    
+
     public Map<String, Nation> getNationsMap() {
         return nations;
     }
-    
+
     public Trie getNationsTrie() {
     	return nationsTrie;
 	}
-	
+
     public Map<String, Resident> getResidentMap() {
         return residents;
     }
@@ -265,29 +265,29 @@ public class TownyUniverse {
 	public Trie getResidentsTrie() {
 		return residentsTrie;
 	}
-	
+
     public List<Resident> getJailedResidentMap() {
         return jailedResidents;
     }
-    
+
     public Map<String, Town> getTownsMap() {
         return towns;
     }
-    
+
     public Trie getTownsTrie() {
     	return townsTrie;
 	}
-	
+
     public Map<String, TownyWorld> getWorldMap() {
         return worlds;
     }
-    
+
     public TownyDataSource getDataSource() {
         return dataSource;
     }
-    
+
     public List<String> getTreeString(int depth) {
-        
+
         List<String> out = new ArrayList<>();
         out.add(getTreeDepth(depth) + "Universe (1)");
         if (towny != null) {
@@ -300,18 +300,18 @@ public class TownyUniverse {
         for (TownyWorld world : worlds.values()) {
             out.addAll(world.getTreeString(depth + 2));
         }
-        
+
         out.add(getTreeDepth(depth + 1) + "Nations (" + nations.size() + "):");
         for (Nation nation : nations.values()) {
             out.addAll(nation.getTreeString(depth + 2));
         }
-        
+
         Collection<Town> townsWithoutNation = dataSource.getTownsWithoutNation();
         out.add(getTreeDepth(depth + 1) + "Towns (" + townsWithoutNation.size() + "):");
         for (Town town : townsWithoutNation) {
             out.addAll(town.getTreeString(depth + 2));
         }
-        
+
         Collection<Resident> residentsWithoutTown = dataSource.getResidentsWithoutTown();
         out.add(getTreeDepth(depth + 1) + "Residents (" + residentsWithoutTown.size() + "):");
         for (Resident resident : residentsWithoutTown) {
@@ -319,9 +319,9 @@ public class TownyUniverse {
         }
         return out;
     }
-    
+
     private String getTreeDepth(int depth) {
-        
+
         char[] fill = new char[depth * 4];
         Arrays.fill(fill, ' ');
         if (depth > 0) {
@@ -333,7 +333,7 @@ public class TownyUniverse {
         }
         return new String(fill);
     }
-    
+
     /**
      * Pretty much this method checks if a townblock is contained within a list of locations.
      *
@@ -352,22 +352,22 @@ public class TownyUniverse {
         }
         return false;
     }
-    
+
     public void addCustomCustomDataField(CustomDataField cdf) throws KeyAlreadyRegisteredException {
-    	
+
     	if (this.getRegisteredMetadataMap().containsKey(cdf.getKey()))
     		throw new KeyAlreadyRegisteredException();
-    	
+
     	this.getRegisteredMetadataMap().put(cdf.getKey(), cdf);
 	}
-    
+
     public static TownyUniverse getInstance() {
         if (instance == null) {
             instance = new TownyUniverse();
         }
         return instance;
     }
-    
+
     public void clearAll() {
     	worlds.clear();
         nations.clear();
@@ -378,11 +378,11 @@ public class TownyUniverse {
 
 	public boolean hasGroup(String townName, UUID groupID) {
 		Town t = towns.get(townName);
-		
+
 		if (t != null) {
 			return t.getObjectGroupFromID(groupID) != null;
 		}
-		
+
 		return false;
 	}
 
@@ -399,25 +399,25 @@ public class TownyUniverse {
 	/**
 	 * Get all the plot object groups from all towns
 	 * Returns a collection that does not reflect any group additions/removals
-	 * 
+	 *
 	 * @return collection of PlotObjectGroup
 	 */
 	public Collection<PlotGroup> getGroups() {
     	List<PlotGroup> groups = new ArrayList<>();
-    	
+
 		for (Town town : towns.values()) {
 			if (town.hasPlotGroups()) {
 				groups.addAll(town.getPlotObjectGroups());
 			}
 		}
-		
+
 		return groups;
 	}
 
 
 	/**
-	 * Gets the plot group from the town name and the plot group UUID 
-	 * 
+	 * Gets the plot group from the town name and the plot group UUID
+	 *
 	 * @param townName Town name
 	 * @param groupID UUID of the plot group
 	 * @return PlotGroup if found, null if none found.
@@ -432,13 +432,13 @@ public class TownyUniverse {
 		if (t != null) {
 			return t.getObjectGroupFromID(groupID);
 		}
-		
+
 		return null;
 	}
 
 	/**
 	 * Gets the plot group from the town name and the plot group name
-	 * 
+	 *
 	 * @param townName Town Name
 	 * @param groupName Plot Group Name
 	 * @return the plot group if found, otherwise null
@@ -458,19 +458,19 @@ public class TownyUniverse {
 	}
 
 	public PlotGroup newGroup(Town town, String name, UUID id) throws AlreadyRegisteredException {
-    	
+
     	// Create new plot group.
 		PlotGroup newGroup = new PlotGroup(id, name, town);
-		
+
 		// Check if there is a duplicate
 		if (town.hasPlotGroupName(newGroup.getName())) {
 			TownyMessaging.sendErrorMsg("group " + town.getName() + ":" + id + " already exists"); // FIXME Debug message
 			throw new AlreadyRegisteredException();
 		}
-		
+
 		// Create key and store group globally.
 		town.addPlotGroup(newGroup);
-		
+
 		return newGroup;
 	}
 
@@ -481,16 +481,16 @@ public class TownyUniverse {
 
 	public void removeGroup(PlotGroup group) {
 		group.getTown().removePlotGroup(group);
-		
+
 	}
-	
+
 	public Map<String, CustomDataField> getRegisteredMetadata() {
 		return registeredMetadata;
 	}
 
 	/**
 	 * How to get a TownBlock for now.
-	 * 
+	 *
 	 * @param worldCoord we are testing for a townblock.
 	 * @return townblock if it exists, otherwise null.
 	 * @throws NotRegisteredException if there is no homeblock to get.
@@ -498,21 +498,21 @@ public class TownyUniverse {
 	public TownBlock getTownBlock(WorldCoord worldCoord) throws NotRegisteredException {
 		if (hasTownBlock(worldCoord))
 			return townBlocks.get(worldCoord);
-		else 
+		else
 			throw new NotRegisteredException();
 	}
 
 	/**
 	 * Get Universe-wide ConcurrentHashMap of WorldCoords and their TownBlocks.
 	 * Populated at load time from townblocks folder's files.
-	 * 
-	 * 
+	 *
+	 *
 	 * @return townblocks hashmap read from townblock files.
-	 */	
+	 */
 	public Map<WorldCoord, TownBlock> getTownBlocks() {
 		return townBlocks;
 	}
-	
+
 	public void addTownBlock(TownBlock townBlock) {
 		if (hasTownBlock(townBlock.getWorldCoord()))
 			return;
@@ -522,7 +522,7 @@ public class TownyUniverse {
 	 * Does this WorldCoord have a TownBlock?
 	 * @param worldCoord - the coord for which we want to know if there is a townblock.
 	 * @return true if Coord is a townblock
-	 */	
+	 */
 	public boolean hasTownBlock(WorldCoord worldCoord) {
 		return townBlocks.containsKey(worldCoord);
 	}
@@ -532,7 +532,7 @@ public class TownyUniverse {
 	 * @param townBlock to remove.
 	 */
 	public void removeTownBlock(TownBlock townBlock) {
-		
+
 		if (removeTownBlock(townBlock.getWorldCoord())) {
 			try {
 				if (townBlock.hasResident())
@@ -546,7 +546,7 @@ public class TownyUniverse {
 			}
 		}
 	}
-	
+
 	/**
 	 * Remove a list of TownBlocks from the TownyUniverse townblock map.
 	 * @param townBlocks to remove.
@@ -557,10 +557,10 @@ public class TownyUniverse {
 			removeTownBlock(townBlock);
 	}
 
-	/** 
+	/**
 	 * Removes a townblock at the given worldCoord from the TownyUniverse townblock map.
 	 * @param worldCoord to remove.
-	 * @return whether the townblock was successfully removed   
+	 * @return whether the townblock was successfully removed
 	 */
 	private boolean removeTownBlock(WorldCoord worldCoord) {
 
